@@ -1,31 +1,26 @@
 package apt
 
-
 import (
+	"bytes"
 	"fmt"
 	"os/exec"
-	"bytes"
 	"regexp"
 )
 
-
-const DPKG_CMD_NAME = "dpkg"
-
-type Package struct {
-	State string
+type PackageListing struct {
 	Name string
-	Version string
-	Architecture string
 	Description string
 }
-func GetInstalledPackages() ([]Package, error) {
+
+func GetAPTPackageNameList() ([]PackageListing, error) {
 	//Get regex ready
-	installedPackageRegexString := `(?m)(^[iuprh]\S)\s+(\S+)\s+(\S+)\s+(\S+)\s+(.+)`
-	regex, _ := regexp.Compile(installedPackageRegexString)
+	//apt list regex
+	packageListingRegexString := `(^\S+) - (.+)`
+	regex, _ := regexp.Compile(packageListingRegexString)
 
 	// dpkg command
-	cmdName := "dpkg"
-	cmdArgs := []string{"--list"}
+	cmdName := "apt-cache"
+	cmdArgs := []string{"search", "."}
 
 	cmd := exec.Command(cmdName, cmdArgs...)
 
@@ -41,19 +36,15 @@ func GetInstalledPackages() ([]Package, error) {
 		return nil, err
 	}
 	// Only output the commands stdout
-	var packages []Package
+	var packages []PackageListing
 	res := regex.FindAllStringSubmatch(string(cmdOutput.Bytes()), -1)
 	for _, line := range res {
-		iPackage := Package{
-			State: line[1],
-			Name: line[2],
-			Version: line[3],
-			Architecture: line[4],
-			Description: line[5],
+		lPackage := PackageListing{
+			Name: line[1],
+			Description: line[2],
 		}
-		packages = append(packages, iPackage)
+		packages = append(packages, lPackage)
 		//fmt.Printf("[%d]: Got Install Package: %s, Version:%s\n", i, iPackage.Name, iPackage.Version)
 	}
 	return packages, nil
-
 }
